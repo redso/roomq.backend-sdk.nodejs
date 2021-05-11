@@ -8,7 +8,7 @@ The [RoomQ](https://www.noq.hk/en/roomq) Backend SDK is used for server-side int
 
 ## High Level Logic
 
-![The SDK Flow](https://github.com/redso/roomq.backend-sdk.nodejs/blob/main/RoomQ-Backend-SDK-JS-high-level-logic-diagram.png?raw=true)
+![The SDK Flow](https://raw.githubusercontent.com/redso/roomq.backend-sdk.nodejs/master/RoomQ-Backend-SDK-JS-high-level-logic-diagram.png)
 
 1.  End user requests a page on your server
 2.  The SDK verify if the request contain a valid ticket and in Serving state. If not, the SDK send him to the queue.
