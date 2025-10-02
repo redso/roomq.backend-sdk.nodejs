@@ -1,7 +1,7 @@
 {
   "name": "roomq",
   "homepage": "https://github.com/redso/roomq.backend-sdk.nodejs",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "main": "dist/index.js",
   "license": "MIT",
   "devDependencies": {

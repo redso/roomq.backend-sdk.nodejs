@@ -45,7 +45,13 @@ You can determine the requests type before pass it to the validation.
 
 ## Implementation Example
 
-The following is an RoomQ integration example in express/nodejs.
+### With client side integration
+
+Here is an example of RoomQ integration in an Express/Node.js application.
+
+The client-side SDK requires access to the ticket cookie, which necessitates setting `httpOnly` to `false`. This allows client-side JavaScript to access the cookie, essential for the SDK's functionality.
+
+While it is recommended to set the `secure` flag to `true` to ensure cookies are only sent over HTTPS, you may set it to `false` during development if HTTPS is unavailable.
 
 ```javascript
 const express = require("express");
@@ -97,8 +103,115 @@ function initializeExpressHttpContextProvider(req, res) {
             expires: expirationDate,
             path: "/",
             domain: domain,
-            secure: true, // Ensures the cookie is only sent over HTTPS, set this value to false if the connection is http only
-            httpOnly: true, // Ensures cookie is only sent over HTTP(S), not accessible via JavaScript. Important: JavaScript SDK cannot be used anymore. If JS integration is required, set this value to false.
+            secure: true,
+            httpOnly: false,
+          });
+        },
+      };
+      return httpResponse;
+    },
+  };
+}
+
+app.get("/", async (req, res) => {
+  try {
+    // Initial Http context provider
+    const provider = initializeExpressHttpContextProvider(req, res);
+
+    // The URL of the destination after user finish queuing in the waiting room
+    // If set null, the default behaviour is return to the current path
+    // If this is handling a POST request, it should not set null.
+    const returnURL = null;
+
+    // Session ID is the unique key for a RoomQ Ticket
+    // If you want to issue unique ticket per login user,
+    // you can pass your userId as the sessionId
+    const sessionId = null;
+
+    const result = roomq.validate(provider, returnURL, sessionId);
+    if (result.needRedirect()) {
+      res.set({
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "Fri, 01 Jan 1990 00:00:00 GMT",
+      });
+      res.redirect(result.getRedirectURL());
+      return;
+    }
+
+    // Request can continue
+    res.send("Entered");
+  } catch (e) {
+    // There was an error validating the request
+    console.log("ERROR:" + e);
+  }
+});
+
+app.listen(8080, () => {
+  console.log("start listening on 8080");
+});
+```
+
+### Without client side integration
+
+The following is a RoomQ integration example in Express/Node.js.
+
+Set `httpOnly` to `true` to prevent access from JavaScript, which enhances security by ensuring that the cookie is not accessible through client-side scripts. This is beneficial if you don't require client-side integration, as it reduces the risk of cross-site scripting (XSS) attacks.
+
+While it is recommended to set the `secure` flag to `true` to ensure cookies are only sent over HTTPS, you may set it to `false` during development if HTTPS is unavailable.
+
+```javascript
+const express = require("express");
+const cookieParser = require("cookie-parser");
+const RoomQ = require("roomq").default;
+const app = express();
+app.use(cookieParser());
+
+const ROOM_ID = "YOUR ROOM ID";
+const ROOM_SECRET = "YOUR ROOM SECRET";
+const ROOMQ_TICKET_ISSUER = "YOUR TICKET ISSUER";
+
+// Initialise SDK
+const roomq = new RoomQ(ROOM_ID, ROOM_SECRET, ROOMQ_TICKET_ISSUER);
+
+function initializeExpressHttpContextProvider(req, res) {
+  return {
+    getHttpRequest: function () {
+      var httpRequest = {
+        getUserAgent: function () {
+          return this.getHeader("user-agent");
+        },
+        getHeader: function (headerName) {
+          var headerValue = req.header(headerName);
+
+          if (!headerValue) return "";
+          return headerValue;
+        },
+        getAbsoluteUri: function () {
+          return req.protocol + "://" + req.get("host") + req.originalUrl;
+        },
+        getUserHostAddress: function () {
+          return req.ip;
+        },
+        getCookieValue: function (cookieKey) {
+          return req.cookies[cookieKey];
+        },
+        getQueryValue: function (key) {
+          return req.query[key];
+        },
+      };
+      return httpRequest;
+    },
+    getHttpResponse: function () {
+      var httpResponse = {
+        setCookie: function (cookieName, cookieValue, domain, expiration) {
+          var expirationDate = new Date(expiration.getTime());
+          res.cookie(cookieName, cookieValue, {
+            expires: expirationDate,
+            path: "/",
+            domain: domain,
+            secure: true,
+            httpOnly: true,
           });
         },
       };
